@@ -1,7 +1,7 @@
 {
   "name": "木箱报价计算器",
   "short_name": "箱型报价",
-  "start_url": "./box.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3498db",
@@ -17,4 +17,5 @@
       "type": "image/png"
     }
   ]
+
 }
