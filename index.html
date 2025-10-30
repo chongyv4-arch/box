@@ -70,6 +70,15 @@ let boxCounter = 0;
 let currentCalc = {};// 本次结果
 /************  初始  ************/
 window.onload = ()=>{loadHistory(); addBox();};
+  // 让输入框在回车切换时自动滚动到可视区域
+document.addEventListener('focusin', (e) => {
+  const input = e.target;
+  if (input.tagName === 'INPUT' && input.type === 'number') {
+    setTimeout(() => {
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300); // 延迟一点，等键盘弹出后再滚
+  }
+});
 /************  添加箱型 - 横排  ************/
 function addBox(){
   boxCounter++;
@@ -154,3 +163,4 @@ const style=document.createElement('style'); style.textContent=`@keyframes fadeO
 </body>
 
 </html>
+
