@@ -158,14 +158,18 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
   }
 });
-// 聚焦时自动滚到可视区域（防止被键盘挡住）
+// 聚焦时自动往上滚一点，避免键盘遮挡
 document.addEventListener('focusin', (e) => {
   if (e.target.tagName === 'INPUT' && e.target.type === 'number') {
     setTimeout(() => {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300); // 等键盘弹出后再滚
+      // 先让浏览器把元素滚到视口顶部
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // 再手动往上多滚 50 像素（可根据需要调）
+      window.scrollBy({ top: -200, behavior: 'smooth' });
+    }, 300); // 等键盘完全弹出
   }
 });
 </script>
 </body>
 </html>
+
