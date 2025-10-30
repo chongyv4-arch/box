@@ -148,16 +148,7 @@ function exportQuotation(){
 const style=document.createElement('style'); style.textContent=`@keyframes fadeOut{from{opacity:1}to{opacity:0}}`; document.head.appendChild(style);
 
 /************  手机端优化：回车跳转 + 自动滚动防遮挡  ************/
-// 回车切换到下一个输入框
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
-  const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
-  const idx = inputs.indexOf(e.target);
-  if (idx !== -1 && idx < inputs.length - 1) {
-    inputs[idx + 1].focus();
-    e.preventDefault();
-  }
-});
+
 // 聚焦时自动往上滚一点，避免键盘遮挡
 document.addEventListener('focusin', (e) => {
   if (e.target.tagName === 'INPUT' && e.target.type === 'number') {
@@ -172,6 +163,7 @@ document.addEventListener('focusin', (e) => {
 </script>
 </body>
 </html>
+
 
 
 
