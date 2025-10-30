@@ -9,6 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>木箱报价计算器</title>
 <style>
+#scrollPad{height:100vh}   /* 100% 屏幕高度，想更长就再加大 */
 * {box-sizing:border-box;margin:0;padding:0}
 body{font-family:Segoe UI,Microsoft YaHei,Helvetica,Arial;background:#f5f7fa;padding:15px;color:#333}
 .container{max-width:1000px;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 6px 25px rgba(0,0,0,.08);overflow:hidden}
@@ -148,22 +149,46 @@ function exportQuotation(){
 const style=document.createElement('style'); style.textContent=`@keyframes fadeOut{from{opacity:1}to{opacity:0}}`; document.head.appendChild(style);
 
 /************  手机端优化：回车跳转 + 自动滚动防遮挡  ************/
-
-// 聚焦时自动往上滚一点，避免键盘遮挡
-document.addEventListener('focusin', (e) => {
-  if (e.target.tagName === 'INPUT' && e.target.type === 'number') {
-    setTimeout(() => {
-      // 先让浏览器把元素滚到视口顶部
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // 再手动往上多滚 50 像素（可根据需要调）
-      window.scrollBy({ top: -1800, behavior: 'smooth' });
-    }, 300); // 等键盘完全弹出
+// 回车切换到下一个输入框
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+  const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
+  const idx = inputs.indexOf(e.target);
+  if (idx !== -1 && idx < inputs.length - 1) {
+    inputs[idx + 1].focus();
+    e.preventDefault();
   }
 });
+
+
+/******************************************************************
+ * 点击输入框 → 立即滚到屏幕中央（iOS 也生效）
+ ******************************************************************/
+function scrollInputToCenter(e) {
+  const inp = e.target;
+  if (inp.tagName !== 'INPUT' || inp.type !== 'number') return;
+
+  // 1. 先让浏览器把键盘弹出来
+  inp.scrollIntoView({ behavior: 'instant', block: 'center' });
+window.scrollBy({ top: 100, behavior: 'instant' }); 
+  // 2. iOS 键盘弹出后可视区变矮，再轻推 60 px（向下滚动条）
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    setTimeout(() => {
+      window.scrollBy({ top: -60, behavior: 'smooth' });
+    }, 350);   // 350 ms 足够键盘完全弹出
+  }
+}
+
+// focusin 会冒泡，iOS 也认
+document.addEventListener('focusin', scrollInputToCenter, true);
+
+
 </script>
+<!-- 底部留空，方便滚动 -->
+<div id="scrollPad"></div>
 </body>
 </html>
-
 
 
 
