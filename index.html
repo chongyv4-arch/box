@@ -165,13 +165,14 @@ document.addEventListener('focusin', (e) => {
       // 先让浏览器把元素滚到视口顶部
       e.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       // 再手动往上多滚 50 像素（可根据需要调）
-      window.scrollBy({ top: 500, behavior: 'smooth' });
+      window.scrollBy({ top: 800, behavior: 'smooth' });
     }, 300); // 等键盘完全弹出
   }
 });
 </script>
 </body>
 </html>
+
 
 
 
