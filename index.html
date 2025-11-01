@@ -7,15 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="箱型报价">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script>
-// 注册 ServiceWorker，让页面能离线运行
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('SW 注册成功'));
-  });
-}
-</script>
+
 <title>木箱报价计算器</title>
 <style>
 #scrollPad{height:100vh}   /* 100% 屏幕高度，想更长就再加大 */
@@ -198,6 +190,7 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 <div id="scrollPad"></div>
 </body>
 </html>
+
 
 
 
