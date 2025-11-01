@@ -63,6 +63,12 @@ h3{margin-bottom:15px;font-size:18px}
 </div>
 
 <script>
+  // 注册 Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log('Service Worker 注册成功'))
+    .catch(err => console.error('Service Worker 注册失败', err));
+}
 /************  数据池  ************/
 let boxCounter = 0;
 let currentCalc = {};// 本次结果
@@ -190,6 +196,7 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 <div id="scrollPad"></div>
 </body>
 </html>
+
 
 
 
