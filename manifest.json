@@ -2,6 +2,7 @@
   "name": "木箱报价计算器",
   "short_name": "木箱报价",
   "start_url": "./index.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3498db",
@@ -19,4 +20,5 @@
   ]
 
 }
+
 
