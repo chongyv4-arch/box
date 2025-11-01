@@ -1,7 +1,7 @@
 // sw.js
 const CACHE = 'box-v1';
 const FILES = [
-  '/box.html',
+  '/index.html',
   '/manifest.json',
   '/sw.js'      // 把自己也缓存
 ];
@@ -18,4 +18,5 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(res => res || fetch(e.request))
   );
+
 });
