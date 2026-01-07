@@ -7,10 +7,9 @@
 <meta name="apple-mobile-web-app-title" content="箱型报价">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>木箱报价计算器</title>
 <style>
-#scrollPad{height:100vh}   /* 100% 屏幕高度，想更长就再加大 */
+#scrollPad{height:100vh}
 * {box-sizing:border-box;margin:0;padding:0}
 body{font-family:Segoe UI,Microsoft YaHei,Helvetica,Arial;background:#f5f7fa;padding:15px;color:#333}
 .container{max-width:1000px;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 6px 25px rgba(0,0,0,.08);overflow:hidden}
@@ -31,56 +30,130 @@ h3{margin-bottom:15px;font-size:18px}
 .box-item-title{font-weight:600;color:#2c3e50}
 .input-group{display:flex;flex-direction:column;min-width:110px;flex:1}
 .input-group label{font-size:12px;color:#555;margin-bottom:4px}
-.input-group input{padding:7px 9px;border:1px solid #ccd3db;border-radius:4px;font-size:14px}
-.input-group input:focus{outline:none;border-color:#3498db}
+.input-group input, .input-group select{padding:7px 9px;border:1px solid #ccd3db;border-radius:4px;font-size:14px}
+.input-group input:focus, .input-group select:focus{outline:none;border-color:#3498db}
 .unit{font-size:11px;color:#95a5a6;margin-top:3px}
 .result-area{background:#ecf0f1;padding:18px;border-radius:8px;margin-top:15px;display:none}
 .total-price{font-size:30px;color:#e74c3c;font-weight:700;text-align:center;margin:10px 0}
 .history-item{background:#fff;border:1px solid #e1e8ed;border-radius:6px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+#modeToggle{margin-left:15px;font-size:13px;padding:6px 12px}
+#proModeHint{display:none;background:#e3f2fd;padding:10px;border-radius:6px;margin-bottom:15px;font-size:13px;color:#1976d2}
+
+/* 新增材料选择器样式 */
+.materials-row{width:100%;display:flex;gap:12px;margin-top:12px;padding-top:12px;border-top:1px dashed #e1e8ed}
+@media(max-width:900px){.materials-row{flex-wrap:wrap}.materials-row .input-group{flex:0 0 calc(50% - 6px)}}
+@media(max-width:600px){.materials-row .input-group{flex:0 0 100%}}
+
 @media(max-width:700px){.box-item{flex-direction:column;align-items:stretch}}
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header"><h1>木箱报价计算器</h1><p>独立单价 · 保存历史 · 导出报价单</p></div>
-
   <div class="section">
-    <h3>待算箱型列表</h3>
+    <h3>待算箱型列表<button id="modeToggle" class="btn" onclick="toggleProMode()">切换专业模式</button></h3>
+    <div id="proModeHint">专业模式：支持板材/龙骨/底板/垫脚四类材料选择，精确计算成本构成</div>
     <div id="boxList"></div>
     <button class="btn btn-success btn-block" onclick="addBox()">＋ 添加箱型</button>
-
     <button class="btn btn-primary btn-block" onclick="calculate()">计算总价</button>
-
     <div id="resultArea" class="result-area">
       <div class="total-price" id="totalPrice">¥0.00</div>
       <div id="resultDetails"></div>
       <button class="btn btn-success" onclick="exportQuotation()">导出报价单</button>
     </div>
-
     <h3 style="margin-top:25px">历史报价记录</h3>
     <div id="historyList"></div>
   </div>
 </div>
 
 <script>
-  // 注册 Service Worker
+// 注册 Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
     .then(() => console.log('Service Worker 注册成功'))
     .catch(err => console.error('Service Worker 注册失败', err));
 }
-/************  数据池  ************/
-let boxCounter = 0;
-let currentCalc = {};// 本次结果
-/************  初始  ************/
-window.onload = ()=>{loadHistory(); addBox();};
-/************  添加箱型 - 横排  ************/
-function addBox(){
+
+// 材料数据库
+const materialDB = {
+  board: { '5厘光板':10.5, '8厘光板':15.12, '9厘光板':18.9, '12厘光板':21.84, '15厘光板':27.29, '5厘漂白板':13.44, '7厘漂白板':14.7, '9厘漂白板':19.74 },
+  keel: { '3.3*1.7*3.5m实木':1.96, '4.0*2.2*3.6m实木':3.13, '厚窄3.0m':2.29, '薄宽3.0m':2.92, '厚宽2.6m':3.85, '4m板条':3.75 },
+  bottom: { '12厘光板':21.84, '15厘光板':27.29, '红板':22.64 },
+  foot: { '实木':7, '多层板':8.44, '3.3*1.7*3.5m实木':1.96, '4.0*2.2*3.6m实木':3.13, '厚窄3.0m':2.29, '薄宽3.0m':2.92, '厚宽2.6m':3.85, '4m板条':3.75 }
+};
+
+// 默认材料配置
+const DEFAULT_MATERIALS = { board:'8厘光板', keel:'厚窄3.0m', bottom:'12厘光板', foot:'实木' };
+
+let isProMode = false, boxCounter = 0, currentCalc = {};
+
+function toggleProMode() {
+  isProMode = !isProMode;
+  const btn = document.getElementById('modeToggle');
+  const hint = document.getElementById('proModeHint');
+  
+  btn.textContent = isProMode ? '返回简易模式' : '切换专业模式';
+  btn.className = isProMode ? 'btn btn-danger' : 'btn';
+  hint.style.display = isProMode ? 'block' : 'none';
+  
+  document.querySelectorAll('.box-item').forEach(card => {
+    if (isProMode) upgradeToPro(card); else downgradeToSimple(card);
+  });
+  
+  if (currentCalc.items?.length > 0) {
+  setTimeout(() => calculate(), 100); // 等待100ms让材料选择器初始化完成
+}
+}
+
+function upgradeToPro(card) {
+  const price = card.querySelector('[data-key=price]')?.value || '';
+  card.querySelector('[data-key=price]').parentElement.remove();
+  
+  const html = `
+    <div class="input-group"><label>单价 (元/m²)</label><input type="number" min="0.01" step="0.01" data-key="price" value="${price}"></div>
+    <div class="materials-row">
+      <div class="input-group"><label>板材类型</label><select data-key="boardType" onchange="updateUnitPrice('${card.id}', 'board')"><option value="">选择板材</option>${Object.keys(materialDB.board).map(t => `<option value="${t}">${t}</option>`).join('')}</select><span class="unit" data-unit="board">-</span></div>
+      <div class="input-group"><label>龙骨类型</label><select data-key="keelType" onchange="updateUnitPrice('${card.id}', 'keel')"><option value="">选择龙骨</option>${Object.keys(materialDB.keel).map(t => `<option value="${t}">${t}</option>`).join('')}</select><span class="unit" data-unit="keel">-</span></div>
+      <div class="input-group"><label>底板类型</label><select data-key="bottomType" onchange="updateUnitPrice('${card.id}', 'bottom')"><option value="">选择底板</option>${Object.keys(materialDB.bottom).map(t => `<option value="${t}">${t}</option>`).join('')}</select><span class="unit" data-unit="bottom">-</span></div>
+      <div class="input-group"><label>垫脚类型</label><select data-key="footType" onchange="updateUnitPrice('${card.id}', 'foot')"><option value="">选择垫脚</option>${Object.keys(materialDB.foot).map(t => `<option value="${t}">${t}</option>`).join('')}</select><span class="unit" data-unit="foot">-</span></div>
+    </div>`;
+  
+  card.insertAdjacentHTML('beforeend', html);
+  
+  setTimeout(() => {
+    ['boardType','keelType','bottomType','footType'].forEach(key => {
+      const select = card.querySelector(`[data-key="${key}"]`);
+      select.value = DEFAULT_MATERIALS[key.replace('Type','')];
+      select.onchange();
+    });
+  }, 10);
+}
+
+function downgradeToSimple(card) {
+  const price = card.querySelector('[data-key=price]').value;
+  card.querySelector('.materials-row').remove();
+  card.querySelector('[data-key=price]').parentElement.remove();
+  card.insertAdjacentHTML('beforeend', `<div class="input-group"><label>单价 (元/m²)</label><input type="number" min="0.01" step="0.01" data-key="price" value="${price}"></div>`);
+}
+
+function updateUnitPrice(boxId, materialType) {
+  const row = document.getElementById(boxId);
+  const select = row.querySelector(`[data-key="${materialType}Type"]`);
+  const unitSpan = row.querySelector(`[data-unit="${materialType}"]`);
+  const price = materialDB[materialType][select.value] || 0;
+  
+  const unitText = { board:'¥' + price + '/m²', keel:'¥' + price + '/m', bottom:'¥' + price + '/m²', foot:'¥' + price + '/m' };
+  unitSpan.textContent = `单价: ${unitText[materialType]}`;
+}
+
+function addBox() {
   boxCounter++;
   const id = `box-${boxCounter}`;
   const div = document.createElement('div');
-  div.className = 'box-item'; div.id = id;
-  div.innerHTML = `
+  div.className = 'box-item';
+  div.id = id;
+  
+  const html = `
     <div class="box-item-header">
       <span class="box-item-title">箱型 ${boxCounter}</span>
       <button class="btn btn-danger" onclick="delBox('${id}')">删除</button>
@@ -88,126 +161,289 @@ function addBox(){
     <div class="input-group"><label>长 (cm)</label><input type="number" min="0.1" step="0.1" data-key="l"></div>
     <div class="input-group"><label>宽 (cm)</label><input type="number" min="0.1" step="0.1" data-key="w"></div>
     <div class="input-group"><label>高 (cm)</label><input type="number" min="0.1" step="0.1" data-key="h"></div>
-    <div class="input-group"><label>单价 (元/m²)</label><input type="number" min="0.01" step="0.01" data-key="price"></div>
-    <div class="input-group"><label>数量</label><input type="number" min="1" step="1" data-key="q"></div>`;
+    ${isProMode ? 
+      `<div class="input-group"><label>单价 (元/m²)</label><input type="number" min="0.01" step="0.01" data-key="price"></div>
+       <div class="input-group"><label>数量</label><input type="number" min="1" step="1" data-key="q"></div>
+       <div class="materials-row">
+         <div class="input-group"><label>板材类型</label><select data-key="boardType" onchange="updateUnitPrice('${id}', 'board')"><option value="">选择板材</option>${Object.keys(materialDB.board).map(t => `<option value="${t}">${t}</option>`).join('')}</select><span class="unit" data-unit="board">-</span></div>
+         <div class="input-group"><label>龙骨类型</label><select data-key="keelType" onchange="updateUnitPrice('${id}', 'keel')"><option value="">选择龙骨</option>${Object.keys(materialDB.keel).map(t => `<option value="${t}">${t}</option>`).join('')}</select><span class="unit" data-unit="keel">-</span></div>
+         <div class="input-group"><label>底板类型</label><select data-key="bottomType" onchange="updateUnitPrice('${id}', 'bottom')"><option value="">选择底板</option>${Object.keys(materialDB.bottom).map(t => `<option value="${t}">${t}</option>`).join('')}</select><span class="unit" data-unit="bottom">-</span></div>
+         <div class="input-group"><label>垫脚类型</label><select data-key="footType" onchange="updateUnitPrice('${id}', 'foot')"><option value="">选择垫脚</option>${Object.keys(materialDB.foot).map(t => `<option value="${t}">${t}</option>`).join('')}</select><span class="unit" data-unit="foot">-</span></div>
+       </div>` 
+      : `<div class="input-group"><label>单价 (元/m²)</label><input type="number" min="0.01" step="0.01" data-key="price"></div>
+         <div class="input-group"><label>数量</label><input type="number" min="1" step="1" data-key="q"></div>`}`;
+  
+  div.innerHTML = html;
   document.getElementById('boxList').appendChild(div);
+  
+  if (isProMode) {
+    setTimeout(() => {
+      ['boardType','keelType','bottomType','footType'].forEach(key => {
+        const select = div.querySelector(`[data-key="${key}"]`);
+        select.value = DEFAULT_MATERIALS[key.replace('Type','')];
+        select.onchange();
+      });
+    }, 10);
+  }
 }
-/************  删除  ************/
-function delBox(id){const card=document.getElementById(id);card.style.animation='fadeOut .3s';setTimeout(()=>card.remove(),300);}
-/************  计算  ************/
-function calculate(){
-  const cards=document.querySelectorAll('.box-item');
-  if(!cards.length){alert('请先添加箱型');return;}
-  currentCalc={items:[],total:0,date:new Date().toLocaleString('zh-CN')};
-  let html='';
-  cards.forEach((c,i)=>{
-    const l=parseFloat(c.querySelector('[data-key=l]').value)||0;
-    const w=parseFloat(c.querySelector('[data-key=w]').value)||0;
-    const h=parseFloat(c.querySelector('[data-key=h]').value)||0;
-    const price=parseFloat(c.querySelector('[data-key=price]').value)||0;
-    const q=parseInt(c.querySelector('[data-key=q]').value)||0;
-    if(!(l&&w&&h&&price&&q)){alert(`第${i+1}项数据不完整`);return;}
-    const area=2*(l*w+l*h+w*h)/10000;// m²
-    const money=area*price*q;
-    currentCalc.items.push({size:`${l}×${w}×${h}cm`,q,area:area.toFixed(4),price,money:money.toFixed(2)});
-    currentCalc.total+=money;
-    html+=`<div>箱型${i+1}  ${currentCalc.items[i].size} ×${q}  面积:${area.toFixed(4)}m²  单价:¥${price}  小计:¥${money.toFixed(2)}</div>`;
-  });
-  if(currentCalc.items.length===0)return;
-  document.getElementById('resultDetails').innerHTML=html;
-  document.getElementById('totalPrice').textContent=`¥${currentCalc.total.toFixed(2)}`;
-  document.getElementById('resultArea').style.display='block';
+
+function delBox(id) {
+  const card = document.getElementById(id);
+  card.style.animation = 'fadeOut .3s';
+  setTimeout(() => card.remove(), 300);
+}
+
+function calculate() { isProMode ? calculatePro() : calculateSimple(); }
+
+function calculateSimple() {
+  const cards = document.querySelectorAll('.box-item');
+  if (!cards.length) { alert('请先添加箱型'); return; }
+  
+  currentCalc = { items: [], total: 0, date: new Date().toLocaleString('zh-CN'), mode: 'simple' };
+  
+  const html = Array.from(cards).map((c, i) => {
+    const l = parseFloat(c.querySelector('[data-key=l]').value) || 0;
+    const w = parseFloat(c.querySelector('[data-key=w]').value) || 0;
+    const h = parseFloat(c.querySelector('[data-key=h]').value) || 0;
+    const price = parseFloat(c.querySelector('[data-key=price]').value) || 0;
+    const q = parseInt(c.querySelector('[data-key=q]').value) || 0;
+    
+    if (!(l && w && h && price && q)) { alert(`第${i+1}项数据不完整`); return ''; }
+    
+    const area = 2 * ((l+6) * (w+6) + (l+6) * (h+10) + (w+6) * (h+10)) / 10000;
+    const money = area * price * q;
+    
+    currentCalc.items.push({ size: `${l}×${w}×${h}cm`, q, area: area.toFixed(4), price, money: money.toFixed(2) });
+    currentCalc.total += money;
+    
+    return `<div>箱型${i+1}  ${l}×${w}×${h}cm ×${q}  面积:${area.toFixed(4)}m²  单价:¥${price}  小计:¥${money.toFixed(2)}</div>`;
+  }).join('');
+  
+  if (currentCalc.items.length === 0) return;
+  
+  document.getElementById('resultDetails').innerHTML = html;
+  document.getElementById('totalPrice').textContent = `¥${currentCalc.total.toFixed(2)}`;
+  document.getElementById('resultArea').style.display = 'block';
   saveHistory(currentCalc);
 }
-/************  历史  ************/
-function saveHistory(data){
-  let h=JSON.parse(localStorage.getItem('boxHistory')||'[]');
-  h.unshift(data); if(h.length>50)h=h.slice(0,50);
-  localStorage.setItem('boxHistory',JSON.stringify(h));
+
+function calculatePro() {
+  const cards = document.querySelectorAll('.box-item');
+  if (!cards.length) { alert('请先添加箱型'); return; }
+  
+  currentCalc = { items: [], total: { cost: 0, revenue: 0, profit: 0 }, date: new Date().toLocaleString('zh-CN'), mode: 'pro' };
+  
+  const html = Array.from(cards).map((c, i) => {
+    const l = parseFloat(c.querySelector('[data-key=l]').value) || 0;
+    const w = parseFloat(c.querySelector('[data-key=w]').value) || 0;
+    const h = parseFloat(c.querySelector('[data-key=h]').value) || 0;
+    const price = parseFloat(c.querySelector('[data-key=price]').value) || 0;
+    const q = parseInt(c.querySelector('[data-key=q]').value) || 0;
+    const boardType = c.querySelector('[data-key=boardType]').value;
+    const keelType = c.querySelector('[data-key=keelType]').value;
+    const bottomType = c.querySelector('[data-key=bottomType]').value;
+    const footType = c.querySelector('[data-key=footType]').value;
+    
+    if (!(l && w && h && q && price && boardType && keelType && bottomType && footType)) {
+      alert(`第${i+1}项数据不完整`); return '';
+    }
+    
+    // 计算成本
+    const outL = (l/100) + 0.06;
+    const outW = (w/100) + 0.06;
+    const outH = (h/100) + 0.1;
+    
+    const unitCost = 
+      materialDB.board[boardType] * (2*outL*outH + 2*outW*outH + outL*outW) +
+      materialDB.bottom[bottomType] * outL*outW +
+      materialDB.foot[footType] * (2 + Math.round(Math.max(outL, outW)/2.2)) * Math.min(outL, outW) +
+      materialDB.keel[keelType] * (4*outL + 4*outW + (8 + Math.round(outL/1.5) + Math.round(outW/1.5)) * outH);
+    
+    const cost = q * Math.round(unitCost * 100) / 100;
+    const area = 2 * ((l+6) * (w+6) + (l+6) * (h+10) + (w+6) * (h+10)) / 10000;
+    const revenue = q * price * area;
+    const profit = revenue - cost;
+    const profitRate = cost > 0 ? (profit / revenue * 100).toFixed(1) : 0;
+    
+    currentCalc.items.push({
+      size: `${l}×${w}×${h}cm`, q, price,
+      materials: { boardType, keelType, bottomType, footType },
+      cost: cost.toFixed(2), revenue: revenue.toFixed(2), profit: profit.toFixed(2), profitRate
+    });
+    
+    currentCalc.total.cost += cost;
+    currentCalc.total.revenue += revenue;
+    currentCalc.total.profit += profit;
+    
+    return `
+      <div style="margin-bottom:8px;padding:8px;background:#fff;border-radius:4px;">
+        <strong>箱型${i+1}  ${l}×${w}×${h}cm ×${q}</strong><br>
+        <span style="color:#e74c3c;">成本: ¥${cost.toFixed(2)}</span> | 
+        <span style="color:#27ae60;">售价: ¥${revenue.toFixed(2)}</span> | 
+        <span style="color:#3498db;">利润: ¥${profit.toFixed(2)}</span> | 
+        <span style="color:#9b59b6;">利润率: ${profitRate}%</span>
+      </div>`;
+  }).join('');
+  
+  if (currentCalc.items.length === 0) return;
+  
+  const totalRate = currentCalc.total.cost > 0 ? (currentCalc.total.profit / currentCalc.total.revenue * 100).toFixed(1) : 0;
+  
+  document.getElementById('resultDetails').innerHTML = html;
+ document.getElementById('totalPrice').innerHTML = `
+  <div style="font-size:22px;margin-bottom:10px;">
+    <span style="color:#e74c3c;">成本: ¥${currentCalc.total.cost.toFixed(2)}</span> | 
+    <span style="color:#27ae60;">售价: ¥${currentCalc.total.revenue.toFixed(2)}</span>
+  </div>
+  <div style="font-size:20px;margin-left: 13px;">    <!-- ✅ 添加了 margin-left: -10px; -->
+    <span style="color:#3498db;">利润: ¥${currentCalc.total.profit.toFixed(2)}</span> | 
+    <span style="color:#9b59b6;">利润率: ${totalRate}%</span>
+  </div>`;
+  document.getElementById('resultArea').style.display = 'block';
+  saveHistory(currentCalc);
+}
+
+function saveHistory(data) {
+  let h = JSON.parse(localStorage.getItem('boxHistory') || '[]');
+  h.unshift(data);
+  if (h.length > 50) h = h.slice(0, 50);
+  localStorage.setItem('boxHistory', JSON.stringify(h));
   loadHistory();
 }
-function loadHistory(){
-  const h=JSON.parse(localStorage.getItem('boxHistory')||'[]');
-  const box=document.getElementById('historyList');
-  if(!h.length){box.innerHTML='<div style="color:#999">暂无历史记录</div>';return;}
-  box.innerHTML=h.map((it,idx)=>`
+
+function loadHistory() {
+  const h = JSON.parse(localStorage.getItem('boxHistory') || '[]');
+  const box = document.getElementById('historyList');
+  if (!h.length) {
+    box.innerHTML = '<div style="color:#999">暂无历史记录</div>';
+    return;
+  }
+  
+  box.innerHTML = h.map((it, idx) => `
     <div class="history-item">
-      <div><div>${it.date}</div><div>共${it.items.length}项  总计:<b>¥${it.total.toFixed(2)}</b></div></div>
-      <div><button class="btn btn-primary" onclick="loadToCalc(${idx})">载入</button><button class="btn btn-danger" onclick="delHistory(${idx})">删除</button></div>
+      <div>
+        <div>${it.date}</div>
+        <div>共${it.items.length}项  总计:<b>¥${(it.total.cost || it.total).toFixed(2)}</b></div>
+        <div style="font-size:11px;color:#666">${it.mode === 'pro' ? '专业模式' : '简易模式'}</div>
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="loadToCalc(${idx})">载入</button>
+        <button class="btn btn-danger" onclick="delHistory(${idx})">删除</button>
+      </div>
     </div>`).join('');
 }
-function loadToCalc(idx){
-  const h=JSON.parse(localStorage.getItem('boxHistory')||'[]')[idx]; if(!h)return;
-  document.getElementById('boxList').innerHTML=''; boxCounter=0;
-  h.items.forEach(it=>{addBox(); const c=document.querySelectorAll('.box-item').length-1,row=document.querySelectorAll('.box-item')[c]; const [l,w,h]=it.size.replace('cm','').split('×'); row.querySelector('[data-key=l]').value=l; row.querySelector('[data-key=w]').value=w; row.querySelector('[data-key=h]').value=h; row.querySelector('[data-key=price]').value=it.price; row.querySelector('[data-key=q]').value=it.q;});
-  currentCalc=h; document.getElementById('resultDetails').innerHTML=h.items.map((it,i)=>`<div>箱型${i+1}  ${it.size} ×${it.q}  面积:${it.area}m²  单价:¥${it.price}  小计:¥${it.money}</div>`).join(''); document.getElementById('totalPrice').textContent=`¥${h.total.toFixed(2)}`; document.getElementById('resultArea').style.display='block'; window.scrollTo({top:0,behavior:'smooth'});
-}
-function delHistory(idx){let h=JSON.parse(localStorage.getItem('boxHistory')||'[]'); h.splice(idx,1); localStorage.setItem('boxHistory',JSON.stringify(h)); loadHistory();}
-/************  导出  ************/
-function exportQuotation(){
-  if(!currentCalc.items.length){alert('暂无可导出的数据');return;}
-  const title=`报价单_${new Date().toISOString().slice(0,10)}`;
-  let csv=`序号,尺寸(cm),数量,面积(m²),单价(元/m²),金额(元)\n`;
-  currentCalc.items.forEach((it,i)=>{csv+=`${i+1},${it.size},${it.q},${it.area},${it.price},${it.money}\n`;});
-  csv+=`,,,,,总计,${currentCalc.total.toFixed(2)}`;
-  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=title+'.csv'; link.click();
-}
-/************  动画  ************/
-const style=document.createElement('style'); style.textContent=`@keyframes fadeOut{from{opacity:1}to{opacity:0}}`; document.head.appendChild(style);
 
-/************  手机端优化：回车跳转 + 自动滚动防遮挡  ************/
-// 回车切换到下一个输入框
+function loadToCalc(idx) {
+  const h = JSON.parse(localStorage.getItem('boxHistory') || '[]')[idx];
+  if (!h) return;
+  
+  // 根据历史记录模式切换
+  if (h.mode === 'pro' && !isProMode) toggleProMode();
+  else if (h.mode !== 'pro' && isProMode) toggleProMode();
+  
+  document.getElementById('boxList').innerHTML = '';
+  boxCounter = 0;
+  
+  // 恢复每个历史项
+  h.items.forEach((item, index) => {
+    addBox();
+    const rows = document.querySelectorAll('.box-item');
+    const row = rows[rows.length - 1];
+    const [l, w, h] = item.size.replace('cm', '').split('×');
+    
+    // 基础数据恢复
+    row.querySelector('[data-key=l]').value = l;
+    row.querySelector('[data-key=w]').value = w;
+    row.querySelector('[data-key=h]').value = h;
+    row.querySelector('[data-key=q]').value = item.q;
+    row.querySelector('[data-key=price]').value = item.price;
+    
+    // 专业模式材料恢复（关键修复：增加延迟）
+    if (h.mode === 'pro') {
+      setTimeout(() => {
+        row.querySelector('[data-key=boardType]').value = item.materials.boardType;
+        row.querySelector('[data-key=keelType]').value = item.materials.keelType;
+        row.querySelector('[data-key=bottomType]').value = item.materials.bottomType;
+        row.querySelector('[data-key=footType]').value = item.materials.footType;
+        
+        // 触发价格显示更新
+        updateUnitPrice(row.id, 'board');
+        updateUnitPrice(row.id, 'keel');
+        updateUnitPrice(row.id, 'bottom');
+        updateUnitPrice(row.id, 'foot');
+      }, 50); // 50ms延迟确保材料选项渲染完成
+    }
+  });
+  
+  // 延迟计算，等待所有材料选择器初始化
+  setTimeout(() => {
+    currentCalc = h;
+    calculate();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
+}
+
+function delHistory(idx) {
+  let h = JSON.parse(localStorage.getItem('boxHistory') || '[]');
+  h.splice(idx, 1);
+  localStorage.setItem('boxHistory', JSON.stringify(h));
+  loadHistory();
+}
+
+function exportQuotation() {
+  if (!currentCalc.items?.length) { alert('暂无可导出的数据'); return; }
+  
+  const title = `报价单_${new Date().toISOString().slice(0, 10)}`;
+  let csv = '\ufeff序号,尺寸(cm),数量,';
+  
+  if (currentCalc.mode === 'pro') {
+    csv += '单价(元/m²),板材,龙骨,底板,垫脚,成本(元),售价(元),利润(元),利润率(%)\n';
+    currentCalc.items.forEach((it, i) => {
+      csv += `${i+1},${it.size},${it.q},${it.price},${it.materials.boardType},${it.materials.keelType},${it.materials.bottomType},${it.materials.footType},${it.cost},${it.revenue},${it.profit},${it.profitRate}\n`;
+    });
+    csv += `,,,,,,,,总计,${currentCalc.total.cost.toFixed(2)},${currentCalc.total.revenue.toFixed(2)},${currentCalc.total.profit.toFixed(2)}`;
+  } else {
+    csv += '面积(m²),单价(元/m²),金额(元)\n';
+    currentCalc.items.forEach((it, i) => {
+      csv += `${i+1},${it.size},${it.q},${it.area},${it.price},${it.money}\n`;
+    });
+    csv += `,,,,,总计,${currentCalc.total.toFixed(2)}`;
+  }
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = title + '.csv';
+  link.click();
+}
+
+// 初始化
+window.addEventListener('DOMContentLoaded', () => {
+  loadHistory();
+  addBox();
+});
+
+// 键盘导航优化
 document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
-  const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
-  const idx = inputs.indexOf(e.target);
-  if (idx !== -1 && idx < inputs.length - 1) {
-    inputs[idx + 1].focus();
-    e.preventDefault();
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+    const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
+    const idx = inputs.indexOf(e.target);
+    if (idx < inputs.length - 1) inputs[idx + 1].focus();
   }
 });
 
-
-/******************************************************************
- * 点击输入框 → 立即滚到屏幕中央（iOS 也生效）
- ******************************************************************/
 function scrollInputToCenter(e) {
   const inp = e.target;
   if (inp.tagName !== 'INPUT' || inp.type !== 'number') return;
-
-  // 1. 先让浏览器把键盘弹出来
   inp.scrollIntoView({ behavior: 'instant', block: 'center' });
-window.scrollBy({ top: 100, behavior: 'instant' }); 
-  // 2. iOS 键盘弹出后可视区变矮，再轻推 60 px（向下滚动条）
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  if (isIOS) {
-    setTimeout(() => {
-      window.scrollBy({ top: -60, behavior: 'smooth' });
-    }, 350);   // 350 ms 足够键盘完全弹出
+  window.scrollBy({ top: 100, behavior: 'instant' });
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+    setTimeout(() => window.scrollBy({ top: -60, behavior: 'smooth' }), 350);
   }
 }
 
-// focusin 会冒泡，iOS 也认
 document.addEventListener('focusin', scrollInputToCenter, true);
-
-
 </script>
-<!-- 底部留空，方便滚动 -->
 <div id="scrollPad"></div>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
