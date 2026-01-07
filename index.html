@@ -7,15 +7,16 @@
 <meta name="apple-mobile-web-app-title" content="箱型报价">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>木箱报价计算器</title>
+<title>木箱报价计算器 Pro</title>
 <style>
-#scrollPad{height:100vh}   /* 100% 屏幕高度，想更长就再加大 */
 * {box-sizing:border-box;margin:0;padding:0}
 body{font-family:Segoe UI,Microsoft YaHei,Helvetica,Arial;background:#f5f7fa;padding:15px;color:#333}
-.container{max-width:1000px;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 6px 25px rgba(0,0,0,.08);overflow:hidden}
-.header{background:linear-gradient(135deg,#3498db 0%,#2c3e50 100%);color:#fff;padding:25px;text-align:center}
+.container{max-width:1100px;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 6px 25px rgba(0,0,0,.08);overflow:hidden}
+.header{background:linear-gradient(135deg,#3498db 0%,#2c3e50 100%);color:#fff;padding:20px;text-align:center;position:relative}
 .header h1{font-size:26px;margin-bottom:6px}
+.mode-toggle{position:absolute;right:20px;top:50%;transform:translateY(-50%);display:flex;gap:5px;background:rgba(255,255,255,.2);padding:4px;border-radius:20px}
+.mode-btn{padding:6px 12px;border:none;border-radius:16px;font-size:13px;cursor:pointer;transition:.3s;background:transparent;color:#fff}
+.mode-btn.active{background:#fff;color:#2c3e50;font-weight:600}
 .section{padding:25px}
 h3{margin-bottom:15px;font-size:18px}
 .btn{padding:9px 18px;border:none;border-radius:6px;font-size:15px;cursor:pointer;transition:.25s}
@@ -31,29 +32,66 @@ h3{margin-bottom:15px;font-size:18px}
 .box-item-title{font-weight:600;color:#2c3e50}
 .input-group{display:flex;flex-direction:column;min-width:110px;flex:1}
 .input-group label{font-size:12px;color:#555;margin-bottom:4px}
-.input-group input{padding:7px 9px;border:1px solid #ccd3db;border-radius:4px;font-size:14px}
-.input-group input:focus{outline:none;border-color:#3498db}
+.input-group input,.input-group select{padding:7px 9px;border:1px solid #ccd3db;border-radius:4px;font-size:14px;background:#fff}
+.input-group input:focus,.input-group select:focus{outline:none;border-color:#3498db}
 .unit{font-size:11px;color:#95a5a6;margin-top:3px}
 .result-area{background:#ecf0f1;padding:18px;border-radius:8px;margin-top:15px;display:none}
 .total-price{font-size:30px;color:#e74c3c;font-weight:700;text-align:center;margin:10px 0}
 .history-item{background:#fff;border:1px solid #e1e8ed;border-radius:6px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
-@media(max-width:700px){.box-item{flex-direction:column;align-items:stretch}}
+.profit-control{background:#e8f4fd;border:1px solid #b3d7f5;border-radius:6px;padding:12px;margin:15px 0}
+.cost-details{background:#fff;border-left:4px solid #3498db;padding:10px;margin-top:10px;font-size:13px;line-height:1.6}
+.material-select-group{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;width:100%}
+@media(max-width:700px){
+  .box-item{flex-direction:column;align-items:stretch}
+  .mode-toggle{position:static;transform:none;margin-top:10px;justify-content:center}
+}
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="header"><h1>木箱报价计算器</h1><p>独立单价 · 保存历史 · 导出报价单</p></div>
+  <div class="header">
+    <h1>木箱报价计算器 Pro</h1>
+    <p>简洁模式 · 专业模式 · 云端同步</p>
+    <div class="mode-toggle">
+      <button class="mode-btn active" onclick="switchMode('simple')">简洁模式</button>
+      <button class="mode-btn" onclick="switchMode('pro')">专业模式</button>
+    </div>
+  </div>
 
   <div class="section">
-    <h3>待算箱型列表</h3>
+    <!-- 利润率控制（仅在专业模式显示） -->
+    <div id="profitControl" class="profit-control" style="display:none">
+      <h3>利润设置</h3>
+      <div style="display:flex;gap:15px;align-items:center">
+        <div class="input-group" style="min-width:120px">
+          <label>利润率</label>
+          <input type="number" id="profitRate" value="30" min="0" max="200" step="1">
+          <div class="unit">%</div>
+        </div>
+        <div style="color:#7f8c8d;font-size:13px">
+          提示：成本价 = 材料总成本；售价 = 成本价 × (1 + 利润率)
+        </div>
+      </div>
+    </div>
+
+    <h3>待算箱型列表 <span id="modeIndicator" style="color:#3498db;font-size:14px">(简洁模式)</span></h3>
     <div id="boxList"></div>
     <button class="btn btn-success btn-block" onclick="addBox()">＋ 添加箱型</button>
 
     <button class="btn btn-primary btn-block" onclick="calculate()">计算总价</button>
 
     <div id="resultArea" class="result-area">
-      <div class="total-price" id="totalPrice">¥0.00</div>
-      <div id="resultDetails"></div>
+      <div id="simpleResult">
+        <div class="total-price" id="totalPrice">¥0.00</div>
+        <div id="resultDetails"></div>
+      </div>
+      <div id="proResult" style="display:none">
+        <div class="total-price">
+          <div>成本价：<span id="costPrice" style="color:#e67e22">¥0.00</span></div>
+          <div style="font-size:24px;margin-top:5px">建议售价：<span id="salePrice" style="color:#e74c3c">¥0.00</span></div>
+        </div>
+        <div id="proResultDetails"></div>
+      </div>
       <button class="btn btn-success" onclick="exportQuotation()">导出报价单</button>
     </div>
 
@@ -63,100 +101,466 @@ h3{margin-bottom:15px;font-size:18px}
 </div>
 
 <script>
-  // 注册 Service Worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js')
-    .then(() => console.log('Service Worker 注册成功'))
-    .catch(err => console.error('Service Worker 注册失败', err));
-}
-/************  数据池  ************/
+// ==================== 材料数据库（从Excel提取） ====================
+const MATERIAL_DB = {
+  boards: {
+    '8厘光板': 15.12, '12厘光板': 21.84, '15厘光板': 27.29,
+    '5厘漂白板': 13.44, '7厘漂白板': 14.7, '9厘漂白板': 19.74,
+    '5厘光板': 10.5, '9厘光板': 18.9, '12厘光板(2)': 21.84
+  },
+  skeletons: {
+    '厚窄3.0m': 2.29, '薄宽3.0m': 2.92, '3.3*1.7*3.5m实木': 1.96,
+    '4.0*2.2*3.6m实木': 3.13, '厚宽2.6m': 3.85, '4m板条': 3.75
+  },
+  bases: {
+    '12厘光板': 21.84, '15厘光板': 27.29, '红板': 22.64
+  },
+  footings: {
+    '多层板': 8.44, '实木': 4.0
+  }
+};
+
+// 材料厚度映射（mm → cm）
+const THICKNESS_MAP = {
+  '5厘光板': 0.5, '5厘漂白板': 0.5,
+  '7厘漂白板': 0.7, '8厘光板': 0.8,
+  '9厘光板': 0.9, '9厘漂白板': 0.9,
+  '12厘光板': 1.2, '12厘光板(2)': 1.2, '红板': 1.2,
+  '15厘光板': 1.5, '18厘光板': 1.8
+};
+
+// ==================== 全局状态 ====================
 let boxCounter = 0;
-let currentCalc = {};// 本次结果
-/************  初始  ************/
-window.onload = ()=>{loadHistory(); addBox();};
-/************  添加箱型 - 横排  ************/
-function addBox(){
+let currentCalc = {};
+let currentMode = 'simple'; // simple | pro
+
+// ==================== 初始化 ====================
+window.onload = () => {
+  loadHistory();
+  addBox();
+  
+  // 注册 Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('Service Worker 注册成功'))
+      .catch(err => console.error('Service Worker 注册失败', err));
+  }
+};
+
+// ==================== 模式切换 ====================
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  const indicator = document.getElementById('modeIndicator');
+  const profitControl = document.getElementById('profitControl');
+  const simpleResult = document.getElementById('simpleResult');
+  const proResult = document.getElementById('proResult');
+  
+  if (mode === 'simple') {
+    indicator.textContent = '(简洁模式)';
+    profitControl.style.display = 'none';
+    simpleResult.style.display = 'block';
+    proResult.style.display = 'none';
+  } else {
+    indicator.textContent = '(专业模式)';
+    profitControl.style.display = 'block';
+    simpleResult.style.display = 'none';
+    proResult.style.display = 'block';
+  }
+  
+  // 清空现有箱型，重新添加
+  document.getElementById('boxList').innerHTML = '';
+  boxCounter = 0;
+  addBox();
+  document.getElementById('resultArea').style.display = 'none';
+}
+
+// ==================== 添加箱型 ====================
+function addBox() {
   boxCounter++;
   const id = `box-${boxCounter}`;
   const div = document.createElement('div');
-  div.className = 'box-item'; div.id = id;
-  div.innerHTML = `
-    <div class="box-item-header">
-      <span class="box-item-title">箱型 ${boxCounter}</span>
-      <button class="btn btn-danger" onclick="delBox('${id}')">删除</button>
-    </div>
-    <div class="input-group"><label>长 (cm)</label><input type="number" min="0.1" step="0.1" data-key="l"></div>
-    <div class="input-group"><label>宽 (cm)</label><input type="number" min="0.1" step="0.1" data-key="w"></div>
-    <div class="input-group"><label>高 (cm)</label><input type="number" min="0.1" step="0.1" data-key="h"></div>
-    <div class="input-group"><label>单价 (元/m²)</label><input type="number" min="0.01" step="0.01" data-key="price"></div>
-    <div class="input-group"><label>数量</label><input type="number" min="1" step="1" data-key="q"></div>`;
+  div.className = 'box-item'; 
+  div.id = id;
+  
+  if (currentMode === 'simple') {
+    div.innerHTML = `
+      <div class="box-item-header">
+        <span class="box-item-title">箱型 ${boxCounter}</span>
+        <button class="btn btn-danger" onclick="delBox('${id}')">删除</button>
+      </div>
+      <div class="input-group">
+        <label>长 (cm)</label>
+        <input type="number" min="0.1" step="0.1" data-key="l" placeholder="内径长">
+      </div>
+      <div class="input-group">
+        <label>宽 (cm)</label>
+        <input type="number" min="0.1" step="0.1" data-key="w" placeholder="内径宽">
+      </div>
+      <div class="input-group">
+        <label>高 (cm)</label>
+        <input type="number" min="0.1" step="0.1" data-key="h" placeholder="内径高">
+      </div>
+      <div class="input-group">
+        <label>单价 (元/m²)</label>
+        <input type="number" min="0.01" step="0.01" data-key="price" placeholder="整体单价">
+      </div>
+      <div class="input-group">
+        <label>数量</label>
+        <input type="number" min="1" step="1" data-key="q" value="1">
+      </div>`;
+  } else {
+    div.innerHTML = `
+      <div class="box-item-header">
+        <span class="box-item-title">箱型 ${boxCounter} - 专业模式</span>
+        <button class="btn btn-danger" onclick="delBox('${id}')">删除</button>
+      </div>
+      <div class="input-group">
+        <label>长 (cm)</label>
+        <input type="number" min="0.1" step="0.1" data-key="l" placeholder="内径长">
+      </div>
+      <div class="input-group">
+        <label>宽 (cm)</label>
+        <input type="number" min="0.1" step="0.1" data-key="w" placeholder="内径宽">
+      </div>
+      <div class="input-group">
+        <label>高 (cm)</label>
+        <input type="number" min="0.1" step="0.1" data-key="h" placeholder="内径高">
+      </div>
+      <div class="input-group">
+        <label>数量</label>
+        <input type="number" min="1" step="1" data-key="q" value="1">
+      </div>
+      <div class="material-select-group">
+        <div class="input-group">
+          <label>板材类型</label>
+          <select data-key="board">${getOptions('boards')}</select>
+        </div>
+        <div class="input-group">
+          <label>龙骨类型</label>
+          <select data-key="skeleton">${getOptions('skeletons')}</select>
+        </div>
+        <div class="input-group">
+          <label>底板类型</label>
+          <select data-key="base">${getOptions('bases')}</select>
+        </div>
+        <div class="input-group">
+          <label>垫脚类型</label>
+          <select data-key="footing">${getOptions('footings')}</select>
+        </div>
+      </div>`;
+  }
+  
   document.getElementById('boxList').appendChild(div);
 }
-/************  删除  ************/
-function delBox(id){const card=document.getElementById(id);card.style.animation='fadeOut .3s';setTimeout(()=>card.remove(),300);}
-/************  计算  ************/
-function calculate(){
-  const cards=document.querySelectorAll('.box-item');
-  if(!cards.length){alert('请先添加箱型');return;}
-  currentCalc={items:[],total:0,date:new Date().toLocaleString('zh-CN')};
-  let html='';
-  cards.forEach((c,i)=>{
-    const l=parseFloat(c.querySelector('[data-key=l]').value)||0;
-    const w=parseFloat(c.querySelector('[data-key=w]').value)||0;
-    const h=parseFloat(c.querySelector('[data-key=h]').value)||0;
-    const price=parseFloat(c.querySelector('[data-key=price]').value)||0;
-    const q=parseInt(c.querySelector('[data-key=q]').value)||0;
-    if(!(l&&w&&h&&price&&q)){alert(`第${i+1}项数据不完整`);return;}
-    const area=2*(l*w+l*h+w*h)/10000;// m²
-    const money=area*price*q;
-    currentCalc.items.push({size:`${l}×${w}×${h}cm`,q,area:area.toFixed(4),price,money:money.toFixed(2)});
-    currentCalc.total+=money;
-    html+=`<div>箱型${i+1}  ${currentCalc.items[i].size} ×${q}  面积:${area.toFixed(4)}m²  单价:¥${price}  小计:¥${money.toFixed(2)}</div>`;
+
+function getOptions(category) {
+  const items = MATERIAL_DB[category] || {};
+  return Object.keys(items).map(key => `<option value="${key}">${key} (¥${items[key]}/m²)</option>`).join('');
+}
+
+// ==================== 删除箱型 ====================
+function delBox(id) {
+  const card = document.getElementById(id);
+  card.style.animation = 'fadeOut .3s';
+  setTimeout(() => card.remove(), 300);
+}
+
+// ==================== 计算逻辑 ====================
+function calculate() {
+  const cards = document.querySelectorAll('.box-item');
+  if (!cards.length) {
+    alert('请先添加箱型');
+    return;
+  }
+  
+  const profitRate = parseFloat(document.getElementById('profitRate')?.value || 30) / 100;
+  
+  currentCalc = {
+    mode: currentMode,
+    items: [],
+    total: 0,
+    cost: 0,
+    profit: 0,
+    date: new Date().toLocaleString('zh-CN')
+  };
+  
+  let html = '';
+  let proHtml = '';
+  
+  cards.forEach((card, idx) => {
+    const l = parseFloat(card.querySelector('[data-key=l]').value) || 0;
+    const w = parseFloat(card.querySelector('[data-key=w]').value) || 0;
+    const h = parseFloat(card.querySelector('[data-key=h]').value) || 0;
+    const q = parseInt(card.querySelector('[data-key=q]').value) || 0;
+    
+    if (!(l && w && h && q)) {
+      alert(`第${idx + 1}项数据不完整`);
+      return;
+    }
+    
+    if (currentMode === 'simple') {
+      const price = parseFloat(card.querySelector('[data-key=price]').value) || 0;
+      if (!price) {
+        alert(`第${idx + 1}项单价未填写`);
+        return;
+      }
+      const area = 2 * (l * w + l * h + w * h) / 10000;
+      const money = area * price * q;
+      
+      currentCalc.items.push({
+        size: `${l}×${w}×${h}cm`,
+        q,
+        area: area.toFixed(4),
+        price,
+        money: money.toFixed(2),
+        mode: 'simple'
+      });
+      currentCalc.total += money;
+      html += `<div>箱型${idx + 1}  ${currentCalc.items[idx].size} ×${q}  面积:${area.toFixed(4)}m²  单价:¥${price}  小计:¥${money.toFixed(2)}</div>`;
+    } else {
+      // 专业模式计算
+      const board = card.querySelector('[data-key=board]').value;
+      const skeleton = card.querySelector('[data-key=skeleton]').value;
+      const base = card.querySelector('[data-key=base]').value;
+      const footing = card.querySelector('[data-key=footing]').value;
+      
+      // 获取厚度并计算外尺寸
+      const thickness = THICKNESS_MAP[board] || 0.8;
+      const outerL = l + thickness * 2;
+      const outerW = w + thickness * 2;
+      const outerH = h + thickness * 2;
+      
+      // 计算各项成本
+      const boardArea = 2 * (l * w + l * h + w * h) / 10000; // 板材面积
+      const boardCost = boardArea * MATERIAL_DB.boards[board];
+      
+      // 龙骨长度估算：箱体周长 + 垂直支撑
+      const skeletonLength = (2 * (outerL + outerW) + 4 * outerH) / 100; // 转换为米
+      const skeletonCost = skeletonLength * MATERIAL_DB.skeletons[skeleton];
+      
+      // 底板面积
+      const baseArea = outerL * outerW / 10000;
+      const baseCost = baseArea * MATERIAL_DB.bases[base];
+      
+      // 垫脚数量估算：假设4个
+      const footingCount = 4;
+      const footingCost = footingCount * MATERIAL_DB.footings[footing];
+      
+      // 单箱成本
+      const unitCost = boardCost + skeletonCost + baseCost + footingCost;
+      const totalCost = unitCost * q;
+      const salePrice = totalCost * (1 + profitRate);
+      
+      currentCalc.items.push({
+        size: `${l}×${w}×${h}cm`,
+        outerSize: `${outerL.toFixed(1)}×${outerW.toFixed(1)}×${outerH.toFixed(1)}cm`,
+        q,
+        board,
+        skeleton,
+        base,
+        footing,
+        boardCost: boardCost.toFixed(2),
+        skeletonCost: skeletonCost.toFixed(2),
+        baseCost: baseCost.toFixed(2),
+        footingCost: footingCost.toFixed(2),
+        unitCost: unitCost.toFixed(2),
+        totalCost: totalCost.toFixed(2),
+        salePrice: salePrice.toFixed(2),
+        mode: 'pro'
+      });
+      
+      currentCalc.cost += totalCost;
+      currentCalc.profit += (salePrice - totalCost);
+      
+      proHtml += `
+        <div style="margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #ddd">
+          <div style="font-weight:600;margin-bottom:8px">箱型${idx + 1}  ${l}×${w}×${h}cm (外:${outerL.toFixed(1)}×${outerW.toFixed(1)}×${outerH.toFixed(1)}cm) ×${q}</div>
+          <div class="cost-details">
+            板材(${board}): ¥${boardCost.toFixed(2)} (面积:${boardArea.toFixed(4)}m² × ¥${MATERIAL_DB.boards[board]}/m²)<br>
+            龙骨(${skeleton}): ¥${skeletonCost.toFixed(2)} (长度:${skeletonLength.toFixed(2)}m × ¥${MATERIAL_DB.skeletons[skeleton]}/m)<br>
+            底板(${base}): ¥${baseCost.toFixed(2)} (面积:${baseArea.toFixed(4)}m² × ¥${MATERIAL_DB.bases[base]}/m²)<br>
+            垫脚(${footing}): ¥${footingCost.toFixed(2)} (${footingCount}个 × ¥${MATERIAL_DB.footings[footing]}/个)<br>
+            <strong>单箱成本: ¥${unitCost.toFixed(2)} | 总成本: ¥${totalCost.toFixed(2)} | 建议售价: ¥${salePrice.toFixed(2)}</strong>
+          </div>
+        </div>`;
+    }
   });
-  if(currentCalc.items.length===0)return;
-  document.getElementById('resultDetails').innerHTML=html;
-  document.getElementById('totalPrice').textContent=`¥${currentCalc.total.toFixed(2)}`;
-  document.getElementById('resultArea').style.display='block';
+  
+  if (currentCalc.items.length === 0) return;
+  
+  if (currentMode === 'simple') {
+    document.getElementById('resultDetails').innerHTML = html;
+    document.getElementById('totalPrice').textContent = `¥${currentCalc.total.toFixed(2)}`;
+  } else {
+    document.getElementById('proResultDetails').innerHTML = proHtml;
+    document.getElementById('costPrice').textContent = `¥${currentCalc.cost.toFixed(2)}`;
+    document.getElementById('salePrice').textContent = `¥${(currentCalc.cost * (1 + profitRate)).toFixed(2)}`;
+  }
+  
+  document.getElementById('resultArea').style.display = 'block';
   saveHistory(currentCalc);
 }
-/************  历史  ************/
-function saveHistory(data){
-  let h=JSON.parse(localStorage.getItem('boxHistory')||'[]');
-  h.unshift(data); if(h.length>50)h=h.slice(0,50);
-  localStorage.setItem('boxHistory',JSON.stringify(h));
+
+// ==================== 历史记录 ====================
+function saveHistory(data) {
+  let h = JSON.parse(localStorage.getItem('boxHistory') || '[]');
+  h.unshift(data);
+  if (h.length > 50) h = h.slice(0, 50);
+  localStorage.setItem('boxHistory', JSON.stringify(h));
   loadHistory();
 }
-function loadHistory(){
-  const h=JSON.parse(localStorage.getItem('boxHistory')||'[]');
-  const box=document.getElementById('historyList');
-  if(!h.length){box.innerHTML='<div style="color:#999">暂无历史记录</div>';return;}
-  box.innerHTML=h.map((it,idx)=>`
-    <div class="history-item">
-      <div><div>${it.date}</div><div>共${it.items.length}项  总计:<b>¥${it.total.toFixed(2)}</b></div></div>
-      <div><button class="btn btn-primary" onclick="loadToCalc(${idx})">载入</button><button class="btn btn-danger" onclick="delHistory(${idx})">删除</button></div>
-    </div>`).join('');
-}
-function loadToCalc(idx){
-  const h=JSON.parse(localStorage.getItem('boxHistory')||'[]')[idx]; if(!h)return;
-  document.getElementById('boxList').innerHTML=''; boxCounter=0;
-  h.items.forEach(it=>{addBox(); const c=document.querySelectorAll('.box-item').length-1,row=document.querySelectorAll('.box-item')[c]; const [l,w,h]=it.size.replace('cm','').split('×'); row.querySelector('[data-key=l]').value=l; row.querySelector('[data-key=w]').value=w; row.querySelector('[data-key=h]').value=h; row.querySelector('[data-key=price]').value=it.price; row.querySelector('[data-key=q]').value=it.q;});
-  currentCalc=h; document.getElementById('resultDetails').innerHTML=h.items.map((it,i)=>`<div>箱型${i+1}  ${it.size} ×${it.q}  面积:${it.area}m²  单价:¥${it.price}  小计:¥${it.money}</div>`).join(''); document.getElementById('totalPrice').textContent=`¥${h.total.toFixed(2)}`; document.getElementById('resultArea').style.display='block'; window.scrollTo({top:0,behavior:'smooth'});
-}
-function delHistory(idx){let h=JSON.parse(localStorage.getItem('boxHistory')||'[]'); h.splice(idx,1); localStorage.setItem('boxHistory',JSON.stringify(h)); loadHistory();}
-/************  导出  ************/
-function exportQuotation(){
-  if(!currentCalc.items.length){alert('暂无可导出的数据');return;}
-  const title=`报价单_${new Date().toISOString().slice(0,10)}`;
-  let csv=`序号,尺寸(cm),数量,面积(m²),单价(元/m²),金额(元)\n`;
-  currentCalc.items.forEach((it,i)=>{csv+=`${i+1},${it.size},${it.q},${it.area},${it.price},${it.money}\n`;});
-  csv+=`,,,,,总计,${currentCalc.total.toFixed(2)}`;
-  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=title+'.csv'; link.click();
-}
-/************  动画  ************/
-const style=document.createElement('style'); style.textContent=`@keyframes fadeOut{from{opacity:1}to{opacity:0}}`; document.head.appendChild(style);
 
-/************  手机端优化：回车跳转 + 自动滚动防遮挡  ************/
-// 回车切换到下一个输入框
+function loadHistory() {
+  const h = JSON.parse(localStorage.getItem('boxHistory') || '[]');
+  const box = document.getElementById('historyList');
+  
+  if (!h.length) {
+    box.innerHTML = '<div style="color:#999">暂无历史记录</div>';
+    return;
+  }
+  
+  box.innerHTML = h.map((it, idx) => {
+    const modeText = it.mode === 'pro' ? '[专业]' : '[简洁]';
+    const summary = it.mode === 'pro' 
+      ? `成本:¥${it.cost.toFixed(2)} 售价:¥${(it.cost + it.profit).toFixed(2)}` 
+      : `总计:¥${it.total.toFixed(2)}`;
+    
+    return `
+      <div class="history-item">
+        <div>
+          <div>${it.date} <span style="color:#3498db">${modeText}</span></div>
+          <div>共${it.items.length}项 | ${summary}</div>
+        </div>
+        <div>
+          <button class="btn btn-primary" onclick="loadToCalc(${idx})">载入</button>
+          <button class="btn btn-danger" onclick="delHistory(${idx})">删除</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function loadToCalc(idx) {
+  const h = JSON.parse(localStorage.getItem('boxHistory') || '[]')[idx];
+  if (!h) return;
+  
+  // 切换到对应模式
+  currentMode = h.mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`.mode-btn[onclick*="${currentMode}"]`).classList.add('active');
+  
+  if (currentMode === 'pro') {
+    document.getElementById('profitControl').style.display = 'block';
+    document.getElementById('simpleResult').style.display = 'none';
+    document.getElementById('proResult').style.display = 'block';
+    document.getElementById('modeIndicator').textContent = '(专业模式)';
+  } else {
+    document.getElementById('profitControl').style.display = 'none';
+    document.getElementById('simpleResult').style.display = 'block';
+    document.getElementById('proResult').style.display = 'none';
+    document.getElementById('modeIndicator').textContent = '(简洁模式)';
+  }
+  
+  // 清空并重新加载箱型
+  document.getElementById('boxList').innerHTML = '';
+  boxCounter = 0;
+  
+  h.items.forEach(item => {
+    addBox();
+    const rows = document.querySelectorAll('.box-item');
+    const row = rows[rows.length - 1];
+    
+    const [l, w, hDim] = item.size.replace('cm', '').split('×');
+    row.querySelector('[data-key=l]').value = l;
+    row.querySelector('[data-key=w]').value = w;
+    row.querySelector('[data-key=h]').value = hDim;
+    row.querySelector('[data-key=q]').value = item.q;
+    
+    if (currentMode === 'simple' && item.price) {
+      row.querySelector('[data-key=price]').value = item.price;
+    } else if (currentMode === 'pro') {
+      row.querySelector('[data-key=board]').value = item.board;
+      row.querySelector('[data-key=skeleton]').value = item.skeleton;
+      row.querySelector('[data-key=base]').value = item.base;
+      row.querySelector('[data-key=footing]').value = item.footing;
+    }
+  });
+  
+  currentCalc = h;
+  
+  if (currentMode === 'simple') {
+    document.getElementById('resultDetails').innerHTML = h.items.map((it, i) => 
+      `<div>箱型${i + 1}  ${it.size} ×${it.q}  面积:${it.area}m²  单价:¥${it.price}  小计:¥${it.money}</div>`
+    ).join('');
+    document.getElementById('totalPrice').textContent = `¥${h.total.toFixed(2)}`;
+  } else {
+    const profitRate = parseFloat(document.getElementById('profitRate')?.value || 30);
+    document.getElementById('proResultDetails').innerHTML = h.items.map((it, i) => `
+      <div style="margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #ddd">
+        <div style="font-weight:600;margin-bottom:8px">箱型${i + 1}  ${it.size} (外:${it.outerSize}) ×${it.q}</div>
+        <div class="cost-details">
+          板材(${it.board}): ¥${it.boardCost} | 龙骨(${it.skeleton}): ¥${it.skeletonCost}<br>
+          底板(${it.base}): ¥${it.baseCost} | 垫脚(${it.footing}): ¥${it.footingCost}<br>
+          <strong>单箱成本: ¥${it.unitCost} | 总成本: ¥${it.totalCost} | 建议售价: ¥${it.salePrice}</strong>
+        </div>
+      </div>
+    `).join('');
+    document.getElementById('costPrice').textContent = `¥${h.cost.toFixed(2)}`;
+    document.getElementById('salePrice').textContent = `¥${(h.cost * (1 + profitRate / 100)).toFixed(2)}`;
+  }
+  
+  document.getElementById('resultArea').style.display = 'block';
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function delHistory(idx) {
+  let h = JSON.parse(localStorage.getItem('boxHistory') || '[]');
+  h.splice(idx, 1);
+  localStorage.setItem('boxHistory', JSON.stringify(h));
+  loadHistory();
+}
+
+// ==================== 导出功能 ====================
+function exportQuotation() {
+  if (!currentCalc.items.length) {
+    alert('暂无可导出的数据');
+    return;
+  }
+  
+  const title = `报价单_${new Date().toISOString().slice(0, 10)}`;
+  let csv = '';
+  
+  if (currentMode === 'simple') {
+    csv = `序号,尺寸(cm),数量,面积(m²),单价(元/m²),金额(元)\n`;
+    currentCalc.items.forEach((it, i) => {
+      csv += `${i + 1},${it.size},${it.q},${it.area},${it.price},${it.money}\n`;
+    });
+    csv += `,,,,,总计,${currentCalc.total.toFixed(2)}`;
+  } else {
+    csv = `序号,尺寸(cm),外尺寸(cm),数量,板材,龙骨,底板,垫脚,单箱成本(元),总成本(元),建议售价(元)\n`;
+    currentCalc.items.forEach((it, i) => {
+      csv += `${i + 1},${it.size},${it.outerSize},${it.q},${it.board},${it.skeleton},${it.base},${it.footing},${it.unitCost},${it.totalCost},${it.salePrice}\n`;
+    });
+    csv += `,,,,,,,,,总计成本,${currentCalc.cost.toFixed(2)}\n`;
+    csv += `,,,,,,,,,总利润,${currentCalc.profit.toFixed(2)}\n`;
+    csv += `,,,,,,,,,建议总售价,${(currentCalc.cost + currentCalc.profit).toFixed(2)}`;
+  }
+  
+  const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8;'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = title + '.csv';
+  link.click();
+}
+
+// ==================== 动画 & 交互优化 ====================
+const style = document.createElement('style');
+style.textContent = `@keyframes fadeOut{from{opacity:1}to{opacity:0}}`;
+document.head.appendChild(style);
+
+// 回车跳转
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
   const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
@@ -167,47 +571,22 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-
-/******************************************************************
- * 点击输入框 → 立即滚到屏幕中央（iOS 也生效）
- ******************************************************************/
+// iOS键盘优化
 function scrollInputToCenter(e) {
   const inp = e.target;
   if (inp.tagName !== 'INPUT' || inp.type !== 'number') return;
-
-  // 1. 先让浏览器把键盘弹出来
-  inp.scrollIntoView({ behavior: 'instant', block: 'center' });
-window.scrollBy({ top: 100, behavior: 'instant' }); 
-  // 2. iOS 键盘弹出后可视区变矮，再轻推 60 px（向下滚动条）
+  
+  inp.scrollIntoView({behavior: 'instant', block: 'center'});
+  window.scrollBy({top: 100, behavior: 'instant'});
+  
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   if (isIOS) {
     setTimeout(() => {
-      window.scrollBy({ top: -60, behavior: 'smooth' });
-    }, 350);   // 350 ms 足够键盘完全弹出
+      window.scrollBy({top: -60, behavior: 'smooth'});
+    }, 350);
   }
 }
-
-// focusin 会冒泡，iOS 也认
 document.addEventListener('focusin', scrollInputToCenter, true);
-
-
 </script>
-<!-- 底部留空，方便滚动 -->
-<div id="scrollPad"></div>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
