@@ -107,7 +107,7 @@ function calculate(){
     const price=parseFloat(c.querySelector('[data-key=price]').value)||0;
     const q=parseInt(c.querySelector('[data-key=q]').value)||0;
     if(!(l&&w&&h&&price&&q)){alert(`第${i+1}项数据不完整`);return;}
-    const area=2*((l+6)*(w+6)+(l+6)*(h+10)+(w+6)*(h+10))/10000;// m²
+    const area=2*(l*w+l*h+w*h)/10000;// m²
     const money=area*price*q;
     currentCalc.items.push({size:`${l}×${w}×${h}cm`,q,area:area.toFixed(4),price,money:money.toFixed(2)});
     currentCalc.total+=money;
@@ -196,6 +196,7 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 <div id="scrollPad"></div>
 </body>
 </html>
+
 
 
 
