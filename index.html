@@ -328,14 +328,16 @@ function calculatePro() {
   const totalRate = currentCalc.total.cost > 0 ? (currentCalc.total.profit / currentCalc.total.revenue * 100).toFixed(1) : 0;
   
   document.getElementById('resultDetails').innerHTML = html;
- document.getElementById('totalPrice').innerHTML = `
-  <div style="font-size:22px;margin-bottom:10px;">
-    <span style="color:#e74c3c;">成本: ¥${currentCalc.total.cost.toFixed(2)}</span> | 
-    <span style="color:#27ae60;">售价: ¥${currentCalc.total.revenue.toFixed(2)}</span>
-  </div>
-  <div style="font-size:22px;margin-left: 0px;">    <!-- ✅ 添加了 margin-left: -10px; -->
-    <span style="color:#3498db;">利润: ¥${currentCalc.total.profit.toFixed(2)}</span> | 
-    <span style="color:#9b59b6;">利润率: ${totalRate}%</span>
+document.getElementById('totalPrice').innerHTML = `
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+    <div style="font-size:22px;">
+      <span style="color:#e74c3c;">成本: ¥${currentCalc.total.cost.toFixed(2)}</span> | 
+      <span style="color:#27ae60;">售价: ¥${currentCalc.total.revenue.toFixed(2)}</span>
+    </div>
+    <div style="font-size:22px;">
+      <span style="color:#3498db;">利润: ¥${currentCalc.total.profit.toFixed(2)}</span> | 
+      <span style="color:#9b59b6;">利润率: ${totalRate}%</span>
+    </div>
   </div>`;
   document.getElementById('resultArea').style.display = 'block';
   saveHistory(currentCalc);
@@ -484,6 +486,4 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 </script>
 <div id="scrollPad"></div>
 </body>
-
 </html>
-
