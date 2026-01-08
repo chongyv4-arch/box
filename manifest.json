@@ -1,6 +1,6 @@
 {
-  "name": "木箱报价计算器",
-  "short_name": "木箱报价",
+  "name": "木箱报价计算器Pro",
+  "short_name": "木箱报价Pro",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -19,6 +19,7 @@
   ]
 
 }
+
 
 
 
