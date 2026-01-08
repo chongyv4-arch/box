@@ -288,8 +288,8 @@ function calculatePro() {
     
     // 计算成本
     const outL = (l/100) + 0.06;
-    const outW = (w/100) + 0.06;
-    const outH = (h/100) + 0.1;
+    const outW = (w/100);
+    const outH = (h/100);
     
     const unitCost = 
       materialDB.board[boardType] * (2*outL*outH + 2*outW*outH + outL*outW) +
@@ -486,4 +486,5 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 </script>
 <div id="scrollPad"></div>
 </body>
+
 </html>
