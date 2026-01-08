@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'box-calc-v1.2';
+const CACHE_NAME = 'box-calc-v1.3';
 const urlsToCache = [
   './',
   './index.html',
