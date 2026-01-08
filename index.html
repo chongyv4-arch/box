@@ -294,7 +294,7 @@ function calculatePro() {
     const unitCost = 
       materialDB.board[boardType] * (2*outL*outH + 2*outW*outH + outL*outW) +
       materialDB.bottom[bottomType] * outL*outW +
-      materialDB.foot[footType] * (2 + Math.round(Math.max(outL, outW)/2.2)) * Math.min(outL, outW) +
+      materialDB.foot[footType] * (2 + Math.round(Math.max(outL, outW)/2.0)) * Math.min(outL, outW) +
       materialDB.keel[keelType] * (4*outL + 4*outW + (8 + Math.round(outL/1.5) + Math.round(outW/1.5)) * outH);
     
     const cost = q * Math.round(unitCost * 100) / 100;
@@ -488,3 +488,4 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 </body>
 
 </html>
+
