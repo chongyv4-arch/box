@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'box-calc-v1.1';
+const CACHE_NAME = 'box-calc-v2';
 const urlsToCache = [
   './',
   './index.html',
@@ -21,3 +21,4 @@ self.addEventListener('fetch', event => {
       .then(response => response || fetch(event.request))
   );
 });
+
