@@ -333,7 +333,7 @@ function calculatePro() {
     <span style="color:#e74c3c;">成本: ¥${currentCalc.total.cost.toFixed(2)}</span> | 
     <span style="color:#27ae60;">售价: ¥${currentCalc.total.revenue.toFixed(2)}</span>
   </div>
-  <div style="font-size:20px;margin-left: 13px;">    <!-- ✅ 添加了 margin-left: -10px; -->
+  <div style="font-size:20px;margin-left: -10px;">    <!-- ✅ 添加了 margin-left: -10px; -->
     <span style="color:#3498db;">利润: ¥${currentCalc.total.profit.toFixed(2)}</span> | 
     <span style="color:#9b59b6;">利润率: ${totalRate}%</span>
   </div>`;
@@ -484,4 +484,5 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 </script>
 <div id="scrollPad"></div>
 </body>
+
 </html>
