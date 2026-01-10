@@ -87,13 +87,42 @@ h3{margin-bottom:15px;font-size:18px}
 </div>
 
 <script>
-// 注册 Service Worker
+
+// 注册 Service Worker 并监听更新
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js')
-    .then(() => console.log('Service Worker 注册成功'))
-    .catch(err => console.error('Service Worker 注册失败', err));
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    console.log('Service Worker 注册成功');
+    
+    // 监听 Service Worker 更新
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // 有新版本可用，显示刷新提示
+          showUpdateNotification();
+        }
+      });
+    });
+    
+    // 检查是否有等待中的更新
+    if (reg.waiting) {
+      showUpdateNotification();
+    }
+  }).catch(err => console.error('Service Worker 注册失败', err));
 }
 
+// 显示更新提示
+function showUpdateNotification() {
+  const notification = document.createElement('div');
+  notification.innerHTML = `
+    <div style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3498db;color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:1000;display:flex;gap:10px;align-items:center;">
+      <span>🎉 发现新版本！</span>
+      <button onclick="location.reload()" style="background:#fff;color:#3498db;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:600;">立即刷新</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="background:transparent;color:#fff;border:none;padding:6px;cursor:pointer;">×</button>
+    </div>
+  `;
+  document.body.appendChild(notification);
+}
 // 材料数据库
 const materialDB = {
   board: { '5厘光板':10.5, '8厘光板':15.12, '9厘光板':18.9, '12厘光板':21.84, '15厘光板':27.29, '5厘漂白板':13.44, '7厘漂白板':14.7, '9厘漂白板':19.74 },
@@ -288,7 +317,7 @@ function calculatePro() {
     
     // 计算成本
     const outL = (l/100) + 0.06;
-    const outW = (w/100) + 0.06;
+    const outW = (w/100);
     const outH = (h/100);
     
     const unitCost = 
@@ -486,5 +515,4 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 </script>
 <div id="scrollPad"></div>
 </body>
-
 </html>
