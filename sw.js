@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'box-calc-v1.11'; // 每次更新代码时手动改这个版本号
+const CACHE_NAME = 'box-calc-v1.2'; // 每次更新代码时手动改这个版本号
 
 const urlsToCache = [
   './',
@@ -40,6 +40,7 @@ self.addEventListener('fetch', event => {
   );
 
 });
+
 
 
 
