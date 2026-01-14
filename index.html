@@ -64,7 +64,7 @@ h3{margin-bottom:15px;font-size:18px}
 <div class="container">
   <div class="header">
   <h1>木箱报价计算器Pro</h1>
-  <p>简洁模式 · 专业模式 · 报价单</p>
+  <p>简洁模式 · 专业模式 · 导出报价单</p>
    <div class="mode-toggle">
     <button class="mode-btn active" onclick="switchMode('simple')">简洁模式</button>
     <button class="mode-btn" onclick="switchMode('pro')">专业模式</button>
@@ -277,7 +277,7 @@ function calculateSimple() {
     
     if (!(l && w && h && price && q)) { alert(`第${i+1}项数据不完整`); return ''; }
     
-    const area = 2 * ((l+6) * (w+6) + (l+6) * (h+10) + (w+6) * (h+10)) / 10000;
+    const area = 2 * (l* w + l * h + w * h) / 10000;
     const money = area * price * q;
     
     currentCalc.items.push({ size: `${l}×${w}×${h}cm`, q, area: area.toFixed(4), price, money: money.toFixed(2) });
@@ -327,7 +327,7 @@ function calculatePro() {
       materialDB.keel[keelType] * (4*outL + 4*outW + (8 + Math.round(outL/1.5) + Math.round(outW/1.5)) * outH);
     
     const cost = q * Math.round(unitCost * 100) / 100;
-    const area = 2 * ((l+6) * (w+6) + (l+6) * (h+10) + (w+6) * (h+10)) / 10000;
+    const area = 2 * (l* w + l * h + w * h) / 10000;
     const revenue = q * price * area;
     const profit = revenue - cost;
     const profitRate = cost > 0 ? (profit / revenue * 100).toFixed(1) : 0;
@@ -515,5 +515,4 @@ document.addEventListener('focusin', scrollInputToCenter, true);
 </script>
 <div id="scrollPad"></div>
 </body>
-
 </html>
