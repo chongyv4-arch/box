@@ -64,7 +64,7 @@ h3{margin-bottom:15px;font-size:18px}
 <div class="container">
   <div class="header">
   <h1>木箱报价计算器Pro</h1>
-  <p>简洁模式 · 专业模式 · 导出报价单</p>
+  <p>简洁模式 · 专业模式 · 报价单</p>
    <div class="mode-toggle">
     <button class="mode-btn active" onclick="switchMode('simple')">简洁模式</button>
     <button class="mode-btn" onclick="switchMode('pro')">专业模式</button>
@@ -116,7 +116,7 @@ function showUpdateNotification() {
   const notification = document.createElement('div');
   notification.innerHTML = `
     <div style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3498db;color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:1000;display:flex;gap:10px;align-items:center;">
-      <span>🎉 发现新版本！</span>
+      <span>🎉 发现新版本！</span><br>
       <button onclick="location.reload()" style="background:#fff;color:#3498db;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:600;">立即刷新</button>
       <button onclick="this.parentElement.parentElement.remove()" style="background:transparent;color:#fff;border:none;padding:6px;cursor:pointer;">×</button>
     </div>
