@@ -324,7 +324,7 @@ function calculatePro() {
       materialDB.board[boardType] * (2*outL*outH + 2*outW*outH + outL*(outW+0.06)) +
       materialDB.bottom[bottomType] * outL*(outW+0.06) +
       materialDB.foot[footType] * (2 + Math.round(Math.max(outL, outW)/2.0)) * Math.min(outL, outW) +
-      materialDB.keel[keelType] * (4*outL + 4*outW + (8 + Math.round(outL/1.4) + Math.round(outW/1.4)) * outH);
+      materialDB.keel[keelType] * (4*outL + 4*outW + (8 + Math.round(outL/1.2) + Math.round(outW/1.2)) * outH);
     
     const cost = q * Math.round(unitCost * 100) / 100;
     const area = 2 * (l* w + l * h + w * h) / 10000;
